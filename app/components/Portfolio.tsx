@@ -991,9 +991,16 @@ export default function Portfolio() {
   const [loaded, setLoaded] = useState(false);
   const [zone1Height, setZone1Height] = useState("600vh");
 
-  // Shorter scroll zone on mobile — less scrolling required
+  // Compute zone height in px using window.innerHeight so CSS container and
+  // JS scroll calc always agree — avoids the iOS Safari vh/innerHeight mismatch.
   useEffect(() => {
-    const update = () => setZone1Height(window.innerWidth < 768 ? "300vh" : "600vh");
+    const update = () => {
+      const vh = window.innerHeight;
+      const mobile = window.innerWidth < 768;
+      // mobile: 2.2×vh  →  max scroll = 1.2×vh = zone1Max
+      // desktop: 6×vh   →  max scroll = 5×vh   = zone1Max
+      setZone1Height(mobile ? `${2.2 * vh}px` : `${6 * vh}px`);
+    };
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
@@ -1048,11 +1055,10 @@ export default function Portfolio() {
     window.addEventListener("resize", resize);
 
     const onScroll = () => {
-      // Responsive zone height: 300vh on mobile, 600vh on desktop
-      const zone1Max =
-        window.innerWidth < 768
-          ? 1.2 * window.innerHeight   // 220vh − 100vh = 120vh
-          : 5 * window.innerHeight;    // 600vh − 100vh = 500vh
+      // zone1Max must match (containerHeight − innerHeight) — both now in px
+      const zone1Max = window.innerWidth < 768
+        ? 1.2 * window.innerHeight   // 2.2×vh − 1×vh = 1.2×vh
+        : 5 * window.innerHeight;    // 6×vh − 1×vh   = 5×vh
       rawP.current = Math.min(1, Math.max(0, window.scrollY / zone1Max));
     };
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -1063,9 +1069,13 @@ export default function Portfolio() {
       const scale = Math.min(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight);
       const w = img.naturalWidth * scale;
       const h = img.naturalHeight * scale;
+      const x = (canvas.width - w) / 2;
+      const y = (canvas.height - h) / 2;
       ctx.fillStyle = "#050505";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+      ctx.drawImage(img, x, y, w, h);
+      // Paint over the Veo watermark — scales with the image at any viewport size
+      ctx.fillRect(x + w * 0.83, y + h * 0.84, w * 0.17 + 8, h * 0.16 + 8);
     }
 
     let lastIdx = -1;
@@ -1126,19 +1136,6 @@ export default function Portfolio() {
 
           <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" aria-hidden="true" />
 
-          {/* Covers watermark burned into source frames */}
-          <div
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              bottom: -2,
-              right: -2,
-              width: 280,
-              height: 50,
-              background: "#050505",
-              zIndex: 9999,
-            }}
-          />
 
           {/* Hero */}
           <div
