@@ -1020,7 +1020,7 @@ export default function Portfolio() {
 
     for (let i = 0; i < TOTAL_FRAMES; i++) {
       const img = new Image();
-      img.src = `/frames/ezgif-frame-${String(i + 1).padStart(3, "0")}.png`;
+      img.src = `/frames/ezgif-frame-${String(i + 1).padStart(3, "0")}.webp`;
       const onSettle = () => {
         done++;
         setLoadProgress(Math.round((done / TOTAL_FRAMES) * 100));
