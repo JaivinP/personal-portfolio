@@ -858,7 +858,7 @@ function ProjectsSection() {
 
   return (
     <section id="projects" aria-labelledby="projects-heading">
-      <SectionLabel text="Selected Projects" />
+      <SectionLabel text="Projects" />
       <div style={{ borderTop: DIVIDER }}>
         {PROJECTS.map((p, i) => (
           <ProjectRow
