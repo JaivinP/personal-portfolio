@@ -1007,7 +1007,7 @@ export default function Portfolio() {
   // from a stale innerHeight (iOS chrome show/hide fires resize mid-scroll).
   useEffect(() => {
     let lastWidth = -1;
-    const update = (force = false) => {
+    const applyUpdate = (forceDOM: boolean) => {
       const vh = window.innerHeight;
       const vw = window.innerWidth;
       const mobile = vw < 768;
@@ -1016,14 +1016,15 @@ export default function Portfolio() {
       // Only update DOM state when width changes (breakpoint / orientation).
       // iOS Safari fires resize when browser chrome shows/hides (height-only change)
       // — updating state there causes a React re-render → reflow → scroll jump.
-      if (force || vw !== lastWidth) {
+      if (forceDOM || vw !== lastWidth) {
         lastWidth = vw;
         setZone1Height(mobile ? `${2.2 * vh}px` : `${6 * vh}px`);
       }
     };
-    update(true);
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    const onResize = () => applyUpdate(false);
+    applyUpdate(true);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
   const canvasRef   = useRef<HTMLCanvasElement>(null);
