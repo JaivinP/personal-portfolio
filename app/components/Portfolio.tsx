@@ -193,12 +193,22 @@ function ParticleBackground() {
     window.addEventListener("resize", resize);
 
     const pickColor = (): string => {
+      const colors = [
+        "#ffffff",           // pure white
+        "#ffffff",           // pure white (weighted)
+        "rgb(210,225,255)",  // blue-white
+        "#00ff88",           // neon green
+        "#39ff14",           // electric lime
+        "#ffff00",           // neon yellow
+        "#ff3131",           // neon red
+        "#ff6b00",           // hot orange
+        "#00d4ff",           // electric blue
+        "#818cf8",           // indigo
+        "#5eead4",           // teal
+        "#ff00ff",           // magenta
+      ];
       const r = Math.random();
-      if (r < 0.40) return "#ffffff";
-      if (r < 0.60) return "rgb(210,225,255)";
-      if (r < 0.80) return `rgb(255,${Math.floor(240 + Math.random() * 15)},200)`;
-      if (r < 0.90) return "#818cf8";
-      return "#5eead4";
+      return colors[Math.floor(r * colors.length)];
     };
 
     // Pre-render each star's glow once to an offscreen canvas.
@@ -993,12 +1003,15 @@ export default function Portfolio() {
 
   // Compute zone height in px using window.innerHeight so CSS container and
   // JS scroll calc always agree — avoids the iOS Safari vh/innerHeight mismatch.
+  // zone1MaxRef is kept in sync here so the scroll handler never recalculates
+  // from a stale innerHeight (iOS chrome show/hide fires resize mid-scroll).
   useEffect(() => {
     const update = () => {
       const vh = window.innerHeight;
       const mobile = window.innerWidth < 768;
       // mobile: 2.2×vh  →  max scroll = 1.2×vh = zone1Max
       // desktop: 6×vh   →  max scroll = 5×vh   = zone1Max
+      zone1MaxRef.current = mobile ? 1.2 * vh : 5 * vh;
       setZone1Height(mobile ? `${2.2 * vh}px` : `${6 * vh}px`);
     };
     update();
@@ -1011,6 +1024,7 @@ export default function Portfolio() {
   const rafRef      = useRef<number>(0);
   const rawP        = useRef(0);
   const smoothP     = useRef(0);
+  const zone1MaxRef = useRef(0);
 
   // Zone 1 overlay refs — mutated directly in the RAF loop
   const heroRef      = useRef<HTMLDivElement>(null);
@@ -1050,16 +1064,23 @@ export default function Portfolio() {
 
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+    let lastIdx = -1;
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      // iOS Safari fires resize when browser chrome shows/hides during scroll,
+      // which clears the canvas. Force the RAF loop to redraw the current frame.
+      lastIdx = -1;
+    };
     resize();
     window.addEventListener("resize", resize);
 
     const onScroll = () => {
-      // zone1Max must match (containerHeight − innerHeight) — both now in px
-      const zone1Max = window.innerWidth < 768
-        ? 1.2 * window.innerHeight   // 2.2×vh − 1×vh = 1.2×vh
-        : 5 * window.innerHeight;    // 6×vh − 1×vh   = 5×vh
-      rawP.current = Math.min(1, Math.max(0, window.scrollY / zone1Max));
+      // Use the ref kept in sync with zone1Height so both always use the same
+      // innerHeight snapshot — avoids rawP jumps when iOS chrome toggles.
+      const max = zone1MaxRef.current;
+      if (max > 0) rawP.current = Math.min(1, Math.max(0, window.scrollY / max));
     };
     window.addEventListener("scroll", onScroll, { passive: true });
 
@@ -1077,8 +1098,6 @@ export default function Portfolio() {
       // Paint over the Veo watermark — scales with the image at any viewport size
       ctx.fillRect(x + w * 0.83, y + h * 0.84, w * 0.17 + 8, h * 0.16 + 8);
     }
-
-    let lastIdx = -1;
 
     const loop = () => {
       smoothP.current = prefersReduced
