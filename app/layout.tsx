@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Inter } from "next/font/google";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/next"
 
 const geist = Geist({
   variable: "--font-geist-var",
