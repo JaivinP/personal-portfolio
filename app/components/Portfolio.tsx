@@ -166,7 +166,7 @@ const PROJECTS = [
     accent: undefined as "indigo" | "teal" | undefined,
     badge: undefined as string | undefined,
     devpostUrl: "https://devpost.com/software/aegis-m1webn",
-    logoSrc: undefined as string | undefined,
+    logoSrc: "/logos/failsafe.png",
     imageUrl: undefined as string | undefined,
   },
 ];
@@ -1006,15 +1006,22 @@ export default function Portfolio() {
   // zone1MaxRef is kept in sync here so the scroll handler never recalculates
   // from a stale innerHeight (iOS chrome show/hide fires resize mid-scroll).
   useEffect(() => {
-    const update = () => {
+    let lastWidth = -1;
+    const update = (force = false) => {
       const vh = window.innerHeight;
-      const mobile = window.innerWidth < 768;
-      // mobile: 2.2×vh  →  max scroll = 1.2×vh = zone1Max
-      // desktop: 6×vh   →  max scroll = 5×vh   = zone1Max
+      const vw = window.innerWidth;
+      const mobile = vw < 768;
+      // Always update ref — scroll math must stay in sync with current innerHeight
       zone1MaxRef.current = mobile ? 1.2 * vh : 5 * vh;
-      setZone1Height(mobile ? `${2.2 * vh}px` : `${6 * vh}px`);
+      // Only update DOM state when width changes (breakpoint / orientation).
+      // iOS Safari fires resize when browser chrome shows/hides (height-only change)
+      // — updating state there causes a React re-render → reflow → scroll jump.
+      if (force || vw !== lastWidth) {
+        lastWidth = vw;
+        setZone1Height(mobile ? `${2.2 * vh}px` : `${6 * vh}px`);
+      }
     };
-    update();
+    update(true);
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
@@ -1065,15 +1072,21 @@ export default function Portfolio() {
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     let lastIdx = -1;
+    let resizeTimer: ReturnType<typeof setTimeout>;
 
     const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      // iOS Safari fires resize when browser chrome shows/hides during scroll,
-      // which clears the canvas. Force the RAF loop to redraw the current frame.
-      lastIdx = -1;
+      // Debounce: iOS Safari fires resize when browser chrome shows/hides (height-only).
+      // Resizing the canvas clears it and triggers a redraw — on mobile this happens
+      // mid-scroll and causes a visible flicker. Only resize when settled.
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        lastIdx = -1;
+      }, 150);
     };
-    resize();
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
     window.addEventListener("resize", resize);
 
     const onScroll = () => {
@@ -1126,6 +1139,7 @@ export default function Portfolio() {
 
     return () => {
       cancelAnimationFrame(rafRef.current);
+      clearTimeout(resizeTimer);
       window.removeEventListener("resize", resize);
       window.removeEventListener("scroll", onScroll);
     };
